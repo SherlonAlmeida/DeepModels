@@ -1,0 +1,23 @@
+Criar um ambiente virtual
+    python -m venv ./ambiente_virtual
+
+Habilitar ambiente virtual:
+    ambiente_virtual/Scripts/Activate
+
+Desabilitar Ambiente Virtual:
+    deactivate
+
+Instalar pacotes para o projeto:
+    pip install torch
+    pip install numpy==1.26.4
+    pip install matplotlib
+    pip install imageio
+    pip install tqdm
+    pip install opencv-python
+    pip install wget
+    pip install opt_einsum
+    pip install scipy
+    pip install plotly
+    pip install nbformat
+    pip install pandas
+    pip install seaborn
