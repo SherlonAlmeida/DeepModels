@@ -1,8 +1,12 @@
 Criar um ambiente virtual
-    python -m venv ./ambiente_virtual
+    python -m venv ./nome_do_ambiente
 
 Habilitar ambiente virtual:
+    Windows:
     ambiente_virtual/Scripts/Activate
+
+    Mac:
+    source virtual_environment/bin/activate
 
 Desabilitar Ambiente Virtual:
     deactivate
