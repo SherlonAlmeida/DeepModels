@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from core.update import BasicMultiUpdateBlock
@@ -27,7 +28,6 @@ class RAFTStereo(nn.Module):
         print("Entrou aqui 1 -> class RAFTStereo __init__() ...")
         self.cnet = MultiBasicEncoder(output_dim=[args.hidden_dims, context_dims], norm_fn=args.context_norm, downsample=args.n_downsample)
         self.update_block = BasicMultiUpdateBlock(self.args, hidden_dims=args.hidden_dims)
-
         self.context_zqr_convs = nn.ModuleList([nn.Conv2d(context_dims[i], args.hidden_dims[i]*3, 3, padding=3//2) for i in range(self.args.n_gru_layers)])
 
         if args.shared_backbone:
@@ -71,6 +71,7 @@ class RAFTStereo(nn.Module):
 
         print("Entrou aqui 2 -> class RAFTStereo forward() ...")
 
+        # Sherlon: Convert to [-1, 1] range
         image1 = (2 * (image1 / 255.0) - 1.0).contiguous()
         image2 = (2 * (image2 / 255.0) - 1.0).contiguous()
         
@@ -98,6 +99,8 @@ class RAFTStereo(nn.Module):
             corr_block = CorrBlockFast1D
         elif self.args.corr_implementation == "alt_cuda": # Faster version of alt
             corr_block = AlternateCorrBlock
+        
+        # Sherlon: Initialize the correlation model
         corr_fn = corr_block(fmap1, fmap2, radius=self.args.corr_radius, num_levels=self.args.corr_levels)
 
         coords0, coords1 = self.initialize_flow(net_list[0])
@@ -105,13 +108,14 @@ class RAFTStereo(nn.Module):
         if flow_init is not None:
             coords1 = coords1 + flow_init
 
-        print("Coords", coords1.shape)
-
         flow_predictions = []
         data_correlation = [] #Adicionei
         coords = []           #Adicionei
+
+        # Sherlon: This part will run ITER times (The default in RAFT-Stereo paper is 32)
         for itr in range(iters):
             coords1 = coords1.detach()
+            # Sherlon: Obtain a correlation Volume of dimensionality (1, m/4, n/4, 9*piramyd_levels) = (1, 32, 32, 36) for 128x128 images.
             corr = corr_fn(coords1) # index correlation volume
             flow = coords1 - coords0
             with autocast(enabled=self.args.mixed_precision):

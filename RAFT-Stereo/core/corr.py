@@ -71,6 +71,7 @@ class PytorchAlternateCorrBlock1D:
         self.costs = [] #Adicionei
 
     def corr(self, fmap1, fmap2, coords):
+        # Sherlon: This function is called by __call__() below
         B, D, H, W = fmap2.shape
         # map grid coordinates to [-1,1]
         xgrid, ygrid = coords.split([1,1], dim=-1)
@@ -78,12 +79,12 @@ class PytorchAlternateCorrBlock1D:
         ygrid = 2*ygrid/(H-1) - 1
 
         grid = torch.cat([xgrid, ygrid], dim=-1)
-        print("GRID:", grid.shape)
         output_corr = []
+        # Sherlon: the unbind on grid index 3 will iterate over the '9' value of "torch.Size([1, 32, 32, 9, 2])"
+        # Sherlon: in other words, this loop iterates 9 times
         for grid_slice in grid.unbind(3):
             fmapw_mini = F.grid_sample(fmap2, grid_slice, align_corners=True)
-            print("fmapw_mini:", fmapw_mini.shape, type(grid_slice))
-            print("fmap1:", fmap1.shape)
+            #Sherlon: Both fmap are torch.Size([1, 256, 32, 32])
             corr = torch.sum(fmapw_mini * fmap1, dim=1)
             output_corr.append(corr)
         corr = torch.stack(output_corr, dim=1).permute(0,2,3,1)
@@ -92,15 +93,19 @@ class PytorchAlternateCorrBlock1D:
         output = corr / torch.sqrt(torch.tensor(D).float())
         self.corr_pyramid.append(output) #Adicionei
 
+        print("Correlation each level: ", output.shape)
+        print("Pyramid Levels added:", len(self.corr_pyramid))
+
         return output
 
     def __call__(self, coords):
         r = self.radius
-        coords = coords.permute(0, 2, 3, 1)
-        batch, h1, w1, _ = coords.shape
+        coords = coords.permute(0, 2, 3, 1) # Sherlon: (number_images_pairs, rows, columns, 2)
+        batch, h1, w1, _ = coords.shape     # Sherlon: (1, 32, 32, 2)
         fmap1 = self.fmap1
         fmap2 = self.fmap2
         out_pyramid = []
+        # Sherlon: The example pyramid has 4 levels
         for i in range(self.num_levels):
             dx = torch.zeros(1)
             dy = torch.linspace(-r, r, 2*r+1)
@@ -108,10 +113,10 @@ class PytorchAlternateCorrBlock1D:
             centroid_lvl = coords.reshape(batch, h1, w1, 1, 2).clone()
             centroid_lvl[...,0] = centroid_lvl[...,0] / 2**i
             coords_lvl = centroid_lvl + delta.view(-1, 2)
+            # Sherlon: Obtain correlation between features in the current pyramid level
             corr = self.corr(fmap1, fmap2, coords_lvl)
+            # Sherlon: For the next level it performs a pooling horizontally (epipolar line) in feature map 2
             fmap2 = F.avg_pool2d(fmap2, [1, 2], stride=[1, 2])
-            print(i, fmap2.shape)
-            print("Corr:", corr.shape)
             out_pyramid.append(corr)
         out = torch.cat(out_pyramid, dim=-1)
         print("Out:", out.shape)
