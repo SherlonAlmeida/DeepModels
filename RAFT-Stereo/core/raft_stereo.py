@@ -89,6 +89,20 @@ class RAFTStereo(nn.Module):
             # Rather than running the GRU's conv layers on the context features multiple times, we do it once at the beginning 
             inp_list = [list(conv(i).split(split_size=conv.out_channels//3, dim=1)) for i,conv in zip(inp_list, self.context_zqr_convs)]
 
+        # Debug Context Network (cnet)
+        # print("CnetList ->", len(cnet_list))
+        # for idx_1, x in enumerate(cnet_list):
+        #     for idx_2, y in enumerate(cnet_list[idx_1]):
+        #         print(idx_1, idx_2, cnet_list[idx_1][idx_2].shape)
+        # print("net_List ->", len(net_list))
+        # for idx_1, x in enumerate(net_list):
+        #     for idx_2, y in enumerate(net_list[idx_1]):
+        #         print(idx_1, idx_2, net_list[idx_1][idx_2].shape)
+        # print("inp_List ->", len(inp_list))
+        # for idx_1, x in enumerate(inp_list):
+        #     for idx_2, y in enumerate(inp_list[idx_1]):
+        #         print(idx_1, idx_2, inp_list[idx_1][idx_2].shape)
+
         if self.args.corr_implementation == "reg": # Default
             corr_block = CorrBlock1D
             fmap1, fmap2 = fmap1.float(), fmap2.float()
@@ -109,11 +123,10 @@ class RAFTStereo(nn.Module):
             coords1 = coords1 + flow_init
 
         flow_predictions = []
-        data_correlation = [] #Adicionei
-        coords = []           #Adicionei
 
         # Sherlon: This part will run ITER times (The default in RAFT-Stereo paper is 32)
         for itr in range(iters):
+            print(f"\nIteration {itr} ...")
             coords1 = coords1.detach()
             # Sherlon: Obtain a correlation Volume of dimensionality (1, m/4, n/4, 9*piramyd_levels) = (1, 32, 32, 36) for 128x128 images.
             corr = corr_fn(coords1) # index correlation volume
@@ -130,9 +143,6 @@ class RAFTStereo(nn.Module):
 
             # F(t+1) = F(t) + \Delta(t)
             coords1 = coords1 + delta_flow
-            
-            data_correlation.append(corr) #Adicionei
-            coords.append([coords0, coords1]) #Adicionei
 
             # We do not need to upsample or output intermediate results in test_mode
             if test_mode and itr < iters-1:
@@ -148,8 +158,12 @@ class RAFTStereo(nn.Module):
 
             flow_predictions.append(flow_up)
         
+        #Adicionei fora do For para apenas retornar a ultima iteracao (nao para cada iteracao)
+        data_correlation = corr #Adicionei
+        coords = [coords0, coords1] #Adicionei
+        
         if test_mode:
             print("Entrou aqui 2 -> retornando informacoes obtidas ...")
-            return coords1 - coords0, flow_up, data_correlation, coords, corr_fn
+            return coords1 - coords0, flow_up, data_correlation, coords, corr_fn, up_mask
 
         return flow_predictions

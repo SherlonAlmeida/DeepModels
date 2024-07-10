@@ -113,7 +113,8 @@ class BasicMultiUpdateBlock(nn.Module):
             nn.Conv2d(256, (factor**2)*9, 1, padding=0))
 
     def forward(self, net, inp, corr=None, flow=None, iter08=True, iter16=True, iter32=True, update=True):
-
+        print("Executando GRU...", iter08, iter16, iter32, update)
+        
         if iter32:
             net[2] = self.gru32(net[2], *(inp[2]), pool2x(net[1]))
         if iter16:
