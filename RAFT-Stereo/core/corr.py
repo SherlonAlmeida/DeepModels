@@ -79,22 +79,24 @@ class PytorchAlternateCorrBlock1D:
         ygrid = 2*ygrid/(H-1) - 1
 
         grid = torch.cat([xgrid, ygrid], dim=-1)
+        #print(coords.shape, xgrid.shape, ygrid.shape, grid.shape)
+        #-> torch.Size([1, 32, 32, 9, 2]) torch.Size([1, 32, 32, 9, 1]) torch.Size([1, 32, 32, 9, 1]) torch.Size([1, 32, 32, 9, 2])
         output_corr = []
         # Sherlon: the unbind on grid index 3 will iterate over the '9' value of "torch.Size([1, 32, 32, 9, 2])"
         # Sherlon: in other words, this loop iterates 9 times
         for grid_slice in grid.unbind(3):
+            # Sherlon: Each one of the 9 grid_slice is torch.Size([1, 32, 32, 2])
             fmapw_mini = F.grid_sample(fmap2, grid_slice, align_corners=True)
             #Sherlon: Both fmap are torch.Size([1, 256, 32, 32])
             corr = torch.sum(fmapw_mini * fmap1, dim=1)
             output_corr.append(corr)
         corr = torch.stack(output_corr, dim=1).permute(0,2,3,1)
-        self.costs.append(torch.sum(corr, dim=3)) #Adicionei
+        #self.costs.append(torch.sum(corr, dim=3)) #Adicionei
 
         output = corr / torch.sqrt(torch.tensor(D).float())
-        self.corr_pyramid.append(output) #Adicionei
+        #self.corr_pyramid.append(output) #Adicionei
 
-        print("Correlation each level: ", output.shape)
-        print("Pyramid Levels added:", len(self.corr_pyramid))
+        #print("Correlation each level: ", output.shape) #-> torch.Size([1, 32, 32, 9]
 
         return output
 
@@ -108,7 +110,8 @@ class PytorchAlternateCorrBlock1D:
         # Sherlon: The example pyramid has 4 levels
         for i in range(self.num_levels):
             dx = torch.zeros(1)
-            dy = torch.linspace(-r, r, 2*r+1)
+            dy = torch.linspace(-r, r, 2*r+1) #Sherlon: Creates 9 values
+            # Sherlon: I think delta is a 4x4+1 horizontal window (x = [0 0 0 0 0 0 0 0 0] and y = [-4 -3 -2 -1 0 1 2 3 4] = 9 values)
             delta = torch.stack(torch.meshgrid(dy, dx), axis=-1).to(coords.device)
             centroid_lvl = coords.reshape(batch, h1, w1, 1, 2).clone()
             centroid_lvl[...,0] = centroid_lvl[...,0] / 2**i
