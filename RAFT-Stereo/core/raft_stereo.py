@@ -118,6 +118,11 @@ class RAFTStereo(nn.Module):
         corr_fn = corr_block(fmap1, fmap2, radius=self.args.corr_radius, num_levels=self.args.corr_levels)
 
         coords0, coords1 = self.initialize_flow(net_list[0])
+        print("NetList[0]", net_list[0].shape)
+
+        print("Feature Maps", fmap1.shape, fmap2.shape)
+
+        print("Coords", coords0.shape, coords1.shape)
 
         if flow_init is not None:
             coords1 = coords1 + flow_init

@@ -90,6 +90,7 @@ class PytorchAlternateCorrBlock1D:
             #Sherlon: Both fmap are torch.Size([1, 256, 32, 32])
             corr = torch.sum(fmapw_mini * fmap1, dim=1)
             output_corr.append(corr)
+        print(fmap2.shape, grid_slice.shape, fmapw_mini.shape, corr.shape)
         corr = torch.stack(output_corr, dim=1).permute(0,2,3,1)
         #self.costs.append(torch.sum(corr, dim=3)) #Adicionei
 
@@ -102,7 +103,9 @@ class PytorchAlternateCorrBlock1D:
 
     def __call__(self, coords):
         r = self.radius
+        print("ANTES", coords.shape)
         coords = coords.permute(0, 2, 3, 1) # Sherlon: (number_images_pairs, rows, columns, 2)
+        print("DEPOIS", coords.shape)
         batch, h1, w1, _ = coords.shape     # Sherlon: (1, 32, 32, 2)
         fmap1 = self.fmap1
         fmap2 = self.fmap2
@@ -121,6 +124,8 @@ class PytorchAlternateCorrBlock1D:
             # Sherlon: For the next level it performs a pooling horizontally (epipolar line) in feature map 2
             fmap2 = F.avg_pool2d(fmap2, [1, 2], stride=[1, 2])
             out_pyramid.append(corr)
+        print(coords_lvl.shape)
+        print(coords_lvl)
         out = torch.cat(out_pyramid, dim=-1)
         print("Out:", out.shape)
         return out.permute(0, 3, 1, 2).contiguous().float()
