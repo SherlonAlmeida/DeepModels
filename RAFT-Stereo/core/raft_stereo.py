@@ -169,6 +169,6 @@ class RAFTStereo(nn.Module):
         
         if test_mode:
             print("Entrou aqui 2 -> retornando informacoes obtidas ...")
-            return coords1 - coords0, flow_up, data_correlation, coords, corr_fn, up_mask
+            return coords1 - coords0, flow_up, data_correlation, coords, corr_fn, up_mask, fmap1, fmap2
 
         return flow_predictions
